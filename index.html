@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="mn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Зогсоол Систем - OCR</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .header {
+        text-align: center;
+        color: white;
+        margin-bottom: 30px;
+      }
+      .header h1 {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+      }
+      .main-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+      .card {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      }
+      .card h2 {
+        color: #667eea;
+        margin-bottom: 20px;
+        font-size: 1.5em;
+      }
+      .upload-area {
+        border: 3px dashed #667eea;
+        border-radius: 10px;
+        padding: 40px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-bottom: 20px;
+      }
+      .upload-area:hover {
+        background: #f0f4ff;
+        border-color: #764ba2;
+      }
+      .upload-area.dragover {
+        background: #e0e7ff;
+        border-color: #764ba2;
+      }
+      .upload-icon {
+        font-size: 3em;
+        color: #667eea;
+        margin-bottom: 10px;
+      }
+      input[type="file"] {
+        display: none;
+      }
+      .preview-area {
+        margin: 20px 0;
+        text-align: center;
+      }
+      .preview-area img {
+        max-width: 100%;
+        max-height: 300px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      }
+      .detected-plate {
+        background: #f0f4ff;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 20px 0;
+        text-align: center;
+      }
+      .plate-number {
+        font-size: 2.5em;
+        font-weight: bold;
+        color: #667eea;
+        letter-spacing: 3px;
+        font-family: "Courier New", monospace;
+      }
+      .btn {
+        width: 100%;
+        padding: 15px;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1em;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin: 10px 0;
+      }
+      .btn-enter {
+        background: #10b981;
+        color: white;
+      }
+      .btn-enter:hover {
+        background: #059669;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+      }
+      .btn-exit {
+        background: #ef4444;
+        color: white;
+      }
+      .btn-exit:hover {
+        background: #dc2626;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+      }
+      .btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+      }
+      .status {
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+        display: none;
+      }
+      .status.success {
+        background: #d1fae5;
+        color: #065f46;
+        border: 2px solid #10b981;
+      }
+      .status.error {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 2px solid #ef4444;
+      }
+      .status.info {
+        background: #dbeafe;
+        color: #1e40af;
+        border: 2px solid #3b82f6;
+      }
+      .parked-list {
+        max-height: 500px;
+        overflow-y: auto;
+      }
+      .vehicle-item {
+        background: #f9fafb;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 10px 0;
+        border-left: 4px solid #667eea;
+      }
+      .vehicle-plate {
+        font-size: 1.3em;
+        font-weight: bold;
+        color: #667eea;
+        font-family: "Courier New", monospace;
+      }
+      .vehicle-info {
+        color: #6b7280;
+        margin-top: 5px;
+        font-size: 0.9em;
+      }
+      .loading {
+        display: none;
+        text-align: center;
+        padding: 20px;
+      }
+      .spinner {
+        border: 4px solid #f3f4f6;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      @media (max-width: 768px) {
+        .main-content {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header"><h1>Зогсоолын Систем</h1></div>
+      <div class="main-content">
+        <div class="card">
+          <h2>📸 Машины зураг оруулна уу</h2>
+          <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📷</div>
+            <p><strong>Зураг сонгох</strong></p>
+          </div>
+          <input type="file" id="fileInput" accept="image/*" />
+          <div class="preview-area" id="previewArea" style="display: none">
+            <img id="previewImage" src="" alt="Preview" />
+          </div>
+          <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px; color: #667eea">
+              Машины дугаар хайж байна...
+            </p>
+          </div>
+          <div class="detected-plate" id="detectedPlate" style="display: none">
+            <p style="color: #6b7280; margin-bottom: 10px">Дугаар:</p>
+            <div class="plate-number" id="plateNumber">-</div>
+          </div>
+          <button class="btn btn-enter" id="btnEnter" disabled>Орох</button>
+          <button class="btn btn-exit" id="btnExit" disabled>Гарах</button>
+          <div class="status" id="status"></div>
+        </div>
+        <div class="card">
+          <h2>🅿️ Одоо зогсоолд байгаа машинууд</h2>
+          <div class="parked-list" id="parkedList">
+            <p style="text-align: center; color: #6b7280">Уншиж байна...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const API_URL = "http://localhost:8000";
+      const uploadArea = document.getElementById("uploadArea");
+      const fileInput = document.getElementById("fileInput");
+      const previewArea = document.getElementById("previewArea");
+      const previewImage = document.getElementById("previewImage");
+      const detectedPlate = document.getElementById("detectedPlate");
+      const plateNumber = document.getElementById("plateNumber");
+      const btnEnter = document.getElementById("btnEnter");
+      const btnExit = document.getElementById("btnExit");
+      const status = document.getElementById("status");
+      const loading = document.getElementById("loading");
+      const parkedList = document.getElementById("parkedList");
+      let currentPlate = null;
+
+      uploadArea.addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", (e) => {
+        if (e.target.files.length > 0) handleFile(e.target.files[0]);
+      });
+      uploadArea.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        uploadArea.classList.add("dragover");
+      });
+      uploadArea.addEventListener("dragleave", () => {
+        uploadArea.classList.remove("dragover");
+      });
+      uploadArea.addEventListener("drop", (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove("dragover");
+        if (e.dataTransfer.files.length > 0)
+          handleFile(e.dataTransfer.files[0]);
+      });
+
+      async function handleFile(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          previewImage.src = e.target.result;
+          previewArea.style.display = "block";
+        };
+        reader.readAsDataURL(file);
+
+        loading.style.display = "block";
+        detectedPlate.style.display = "none";
+        btnEnter.disabled = true;
+        btnExit.disabled = true;
+        status.style.display = "none";
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+          const response = await fetch(`${API_URL}/detect-plate`, {
+            method: "POST",
+            body: formData,
+          });
+          const data = await response.json();
+          loading.style.display = "none";
+          if (data.plate) {
+            currentPlate = data.plate;
+            plateNumber.textContent = currentPlate;
+            detectedPlate.style.display = "block";
+            btnEnter.disabled = false;
+            btnExit.disabled = false;
+          } else {
+            showStatus(
+              "error",
+              "Машины дугаар олдсонгүй. Өөр зураг оролдоно уу."
+            );
+          }
+        } catch (error) {
+          loading.style.display = "none";
+          showStatus("error", "Алдаа гарлаа: " + error.message);
+        }
+      }
+
+      btnEnter.addEventListener("click", async () => {
+        if (!currentPlate) return;
+        btnEnter.disabled = true;
+        btnExit.disabled = true;
+        showStatus("info", "Уншиж байна...");
+        try {
+          const response = await fetch(
+            `${API_URL}/enter?plate=${currentPlate}`,
+            { method: "POST", headers: { "Content-Type": "application/json" } }
+          );
+          const data = await response.json();
+          if (data.error) {
+            showStatus("error", data.error);
+          } else if (data.message) {
+            showStatus(
+              "success",
+              `✅ ${currentPlate} машин орлоо! (${new Date(
+                data.entered_at
+              ).toLocaleString("mn-MN")})`
+            );
+            loadParkedVehicles();
+            resetForm();
+          } else {
+            showStatus("error", "Хариу буруу байна");
+          }
+        } catch (error) {
+          showStatus("error", "Алдаа гарлаа: " + error.message);
+        }
+        btnEnter.disabled = false;
+        btnExit.disabled = false;
+      });
+
+      btnExit.addEventListener("click", async () => {
+        if (!currentPlate) return;
+        btnEnter.disabled = true;
+        btnExit.disabled = true;
+        showStatus("info", "Уншиж байна...");
+        try {
+          const response = await fetch(
+            `${API_URL}/exit?plate=${currentPlate}`,
+            { method: "POST", headers: { "Content-Type": "application/json" } }
+          );
+          const data = await response.json();
+          if (data.error) {
+            showStatus("error", data.error);
+          } else if (data.message) {
+            showStatus(
+              "success",
+              `✅ ${currentPlate} машин гарлаа! 💰 Төлбөр: ${data.fee}₮ (⏱️ ${data.minutes} минут)`
+            );
+            loadParkedVehicles();
+            resetForm();
+          } else {
+            showStatus("error", "Хариу буруу байна");
+          }
+        } catch (error) {
+          showStatus("error", "Алдаа гарлаа: " + error.message);
+        }
+        btnEnter.disabled = false;
+        btnExit.disabled = false;
+      });
+
+      function showStatus(type, message) {
+        status.className = "status " + type;
+        status.textContent = message;
+        status.style.display = "block";
+        setTimeout(() => {
+          status.style.display = "none";
+        }, 5000);
+      }
+
+      function resetForm() {
+        setTimeout(() => {
+          previewArea.style.display = "none";
+          detectedPlate.style.display = "none";
+          fileInput.value = "";
+          currentPlate = null;
+          btnEnter.disabled = true;
+          btnExit.disabled = true;
+        }, 3000);
+      }
+
+      async function loadParkedVehicles() {
+        try {
+          const response = await fetch(`${API_URL}/parked-vehicles`);
+          const data = await response.json();
+          if (data.vehicles && data.vehicles.length > 0) {
+            parkedList.innerHTML = data.vehicles
+              .map(
+                (v) => `
+              <div class="vehicle-item">
+                <div class="vehicle-plate">${v.plate}</div>
+                <div class="vehicle-info">⏱️ ${v.minutes_parked} минут | 💰 ${v.current_fee}₮</div>
+              </div>`
+              )
+              .join("");
+          } else {
+            parkedList.innerHTML =
+              '<p style="text-align:center;color:#6b7280">Зогсоолд машин байхгүй байна</p>';
+          }
+        } catch (error) {
+          parkedList.innerHTML =
+            '<p style="text-align:center;color:#ef4444">Алдаа гарлаа</p>';
+        }
+      }
+
+      loadParkedVehicles();
+      setInterval(loadParkedVehicles, 10000);
+    </script>
+  </body>
+</html>
