@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+sqlalchemy
+easyocr
+opencv-python-headless
+numpy
