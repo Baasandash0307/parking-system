@@ -27,7 +27,6 @@ def vehicle_enter(db: Session, vehicle: Vehicle):
     if active_log:
         return None
 
-    # Python datetime.now() ашиглах
     log = ParkingLog(vehicle_id=vehicle.id, entered_at=datetime.now())
     db.add(log)
     db.commit()
@@ -46,7 +45,7 @@ def vehicle_exit(db: Session, vehicle: Vehicle):
     if not log:
         return None
 
-    # Python datetime.now() ашиглах
+    # datetime.now() 
     log.exited_at = datetime.now()
     db.commit()
     db.refresh(log)

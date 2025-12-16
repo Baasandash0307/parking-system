@@ -11,7 +11,6 @@ from datetime import datetime
 
 app = FastAPI()
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,7 +21,7 @@ app.add_middleware(
 
 Base.metadata.create_all(bind=engine)
 
-# OCR reader
+
 reader = easyocr.Reader(["mn"])
 
 
@@ -50,7 +49,7 @@ def extract_plate_from_image(image_bytes):
     return None
 
 
-# --- Орсон машинуудыг шалгах логик нэмсэн --- #
+# --- orson mashinuudig shalgah --- #
 
 
 @app.post("/enter-with-image")
@@ -80,7 +79,22 @@ async def enter_car_with_image(
     except Exception as e:
         return {"error": f"Алдаа гарлаа: {str(e)}"}
 
+    # --- mashinii dugaar tanih  --- #
 
+
+@app.post("/detect-plate")
+async def detect_plate_only(file: UploadFile = File(...)):
+    try:
+        image_bytes = await file.read()
+        plate = extract_plate_from_image(image_bytes)
+        if not plate:
+            return {"error": "Машины дугаар олдсонгүй", "plate": None}
+        return {"plate": plate, "message": "Амжилттай танилаа"}
+    except Exception as e:
+        return {"error": f"Алдаа гарлаа: {str(e)}", "plate": None}
+
+
+# mashin oroh
 @app.post("/enter")
 def enter_car(plate: str, db: Session = Depends(get_db)):
     vehicle = crud.get_vehicle_by_plate(db, plate)
@@ -94,7 +108,7 @@ def enter_car(plate: str, db: Session = Depends(get_db)):
     return {"message": "Машин орлоо", "entered_at": log.entered_at}
 
 
-# --- Гарч байгаа endpoint --- #
+# --- mashin garah --- #
 @app.post("/exit")
 def exit_car(plate: str, db: Session = Depends(get_db)):
     vehicle = crud.get_vehicle_by_plate(db, plate)
@@ -117,11 +131,11 @@ def exit_car(plate: str, db: Session = Depends(get_db)):
     }
 
 
-# --- Зогсоолд байгаа машинуудыг авах --- #
+# --- parked mashinuud --- #
 @app.get("/parked-vehicles")
 def get_parked_vehicles(db: Session = Depends(get_db)):
-    # Орон нутгийн цагийг ашигла
-    current_time = datetime.now()  # datetime.utcnow() биш
+
+    current_time = datetime.now()
     parked_vehicles = crud.get_all_parked_vehicles(db)
 
     result = []
@@ -138,16 +152,3 @@ def get_parked_vehicles(db: Session = Depends(get_db)):
             }
         )
     return {"total": len(result), "vehicles": result}
-
-
-# --- Машины дугаарыг зөвхөн таних --- #
-@app.post("/detect-plate")
-async def detect_plate_only(file: UploadFile = File(...)):
-    try:
-        image_bytes = await file.read()
-        plate = extract_plate_from_image(image_bytes)
-        if not plate:
-            return {"error": "Машины дугаар олдсонгүй", "plate": None}
-        return {"plate": plate, "message": "Амжилттай танилаа"}
-    except Exception as e:
-        return {"error": f"Алдаа гарлаа: {str(e)}", "plate": None}
